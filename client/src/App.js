@@ -16,6 +16,8 @@ class App extends Component {
     userTotalDividends: 0,
     userClaimedDividends: 0,
     userRemainingDividends: 0,
+    halvingBlockInterval: 0,
+    createdAtBlock: 0,
     web3: null,
     dividendsContractInstance: null,
     bondingCurveContractInstance: null
@@ -69,7 +71,8 @@ class App extends Component {
     } = this.state;
 
     // one of these should work..
-    const userEthBalance = await web3.eth.getBalance(userAddress).toString();
+    const userEthBalance = (await web3.eth.getBalance(userAddress));
+    const currentBlock = (await web3.eth.getBlock("latest")).number;
     //const userEthBalance = await web3.eth.balanceOf(userAddress).toString();
 
     const userShares = await dividendsContractInstance.methods.shares(userAddress).call();
@@ -77,11 +80,13 @@ class App extends Component {
     const totalDividends = await dividendsContractInstance.methods.totalDividends().call();
     const userClaimedDividends = await dividendsContractInstance.methods.totalClaimedDividends(userAddress).call();
     // BN??
-    const userTotalDividends = (userShares/totalShares) * totalDividends;
-    const userRemainingDividends = userTotalDividends - userClaimedDividends;
+    const userTotalDividends = ((userShares/totalShares) * totalDividends) || 0;
+    const userRemainingDividends = (userTotalDividends - userClaimedDividends) || 0;
 
     const userBalance = await bondingCurveContractInstance.methods.balanceOf(userAddress).call();
     const totalSupply = await bondingCurveContractInstance.methods.totalSupply().call();
+    const halvingBlockInterval = await bondingCurveContractInstance.methods.halvingBlockInterval().call();
+    const createdAtBlock = await bondingCurveContractInstance.methods.createdAtBlock().call();
 
     // Update state with the result.
     this.setState({
@@ -90,9 +95,13 @@ class App extends Component {
       totalShares,
       userBalance,
       totalSupply,
+      totalDividends,
       userTotalDividends,
       userClaimedDividends,
-      userRemainingDividends
+      userRemainingDividends,
+      halvingBlockInterval,
+      createdAtBlock,
+      currentBlock
     });
   };
 
@@ -104,15 +113,19 @@ class App extends Component {
       <div className="App">
         <h1>Good to Go!</h1>
         <p>The bonding token and dividends contract are deployed</p>
-        <h2>Smart Contract Example</h2>
+        <h2>Current Stats -</h2>
         <p>
           If your contracts compiled and migrated successfully, below will show
           a stored value of 5 (by default).
         </p>
-        <p>
-          Try changing the value stored on <strong>line 40</strong> of App.js.
-        </p>
-        <div>The stored value is: {this.state.storageValue}</div>
+        <div>User address: {this.state.userAddress}</div>
+        <div>Current Block (reload to refresh): {this.state.currentBlock}</div>
+        <div>User eth balance: {this.state.userEthBalance}</div>
+        <div>User token balance: {this.state.userBalance}, token total supply: {this.state.totalSupply}</div>
+        <div>User share balance: {this.state.userShares}, total share supply: {this.state.totalShares}</div>
+        <div>User remaining dividends: {this.state.userRemainingDividends}, user total dividends: {this.state.userTotalDividends}, total dividends: {this.state.totalDividends}</div>
+        <div>current halving factor: {Math.floor((this.state.currentBlock - this.state.createdAtBlock)/this.state.halvingBlockInterval)}</div>
+        <div>Next share halving in: {this.state.halvingBlockInterval - ((this.state.currentBlock - this.state.createdAtBlock)%this.state.halvingBlockInterval)} blocks</div>
       </div>
     );
   }

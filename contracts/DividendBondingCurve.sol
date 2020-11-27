@@ -42,7 +42,7 @@ contract DividendBondingCurve is ERC20 {
     dividendContractAddress = _dividendContractAddress;
     dividendContract = Dividends(_dividendContractAddress);
     // issues one token to msg.sender for buy/sell math to work
-    _mint(msg.sender, uint256(decimals()));
+    _mint(msg.sender, 10**uint256(decimals()));
   }
 
   /**
