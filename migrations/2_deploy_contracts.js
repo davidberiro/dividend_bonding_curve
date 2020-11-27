@@ -2,8 +2,15 @@ var Dividends = artifacts.require("./Dividends.sol");
 var DividendBondingCurve = artifacts.require("./DividendBondingCurve.sol");
 
 module.exports = async function(deployer) {
-  const dividendsContract = await deployer.deploy(Dividends);
-  const curveContract = await deployer.deploy(DividendBondingCurve);
-  // add this after making front end work
-  //await dividendsContract.transferOwnership(curveContract.address);
+  await deployer.deploy(Dividends);
+  const dividendsContract = await Dividends.deployed();
+  await deployer.deploy(
+    DividendBondingCurve,
+    100,
+    dividendsContract.address,
+    "Token",
+    "TKN"
+  );
+  const curveContract = await DividendBondingCurve.deployed();
+  await dividendsContract.transferOwnership(curveContract.address);
 };

@@ -34,7 +34,7 @@ contract Dividends is Ownable {
     owner.send(withdrawAmount);
   }
   
-  function getOutstandingDividends(address owner) internal returns (uint256) {
+  function getOutstandingDividends(address owner) public returns (uint256) {
     uint256 ownerShares = shares[owner];
     uint256 totalDividends = (totalDividends.mul(ownerShares)).div(totalShares);
     uint256 totalClaimed = totalClaimedDividends[owner];
@@ -46,6 +46,6 @@ contract Dividends is Ownable {
    * @dev fallback payable function
    */
   receive() external payable onlyOwner {
-
+    totalDividends = totalDividends.add(msg.value);
   }
 }

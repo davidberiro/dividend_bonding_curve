@@ -28,8 +28,7 @@ contract DividendBondingCurve is ERC20 {
   Dividends dividendContract;
 
   /**
-   * @dev
-   *
+   * @dev constructor
    */
   constructor(
     uint256 _halvingBlockInterval,
@@ -42,6 +41,8 @@ contract DividendBondingCurve is ERC20 {
     halvingBlockInterval = _halvingBlockInterval;
     dividendContractAddress = _dividendContractAddress;
     dividendContract = Dividends(_dividendContractAddress);
+    // issues one token to msg.sender for buy/sell math to work
+    _mint(msg.sender, uint256(decimals()));
   }
 
   /**
