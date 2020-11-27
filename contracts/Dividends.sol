@@ -14,10 +14,10 @@ contract Dividends is Ownable {
 
   // share ownership, cannot be transferred and so if smart contracts own shares
   // they may never be claimable
-  mapping (address => uint256) shares;
+  mapping (address => uint256) public shares;
 
   // total claimed dividends to date
-  mapping (address => uint256) totalClaimedDividends;
+  mapping (address => uint256) public totalClaimedDividends;
 
   constructor() public {
   }
