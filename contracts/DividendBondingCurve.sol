@@ -17,6 +17,12 @@ contract DividendBondingCurve is ERC20 {
   uint256 public fee;
   uint256 public feeBase = 100000;
 
+  // current eth balance
+  uint256 public poolSupply = 0;
+
+  uint256 public dec = 10 ** 18;
+  uint256 public multiple = 10 ** 10;
+
   // every how many blocks the share multiplier halves
   uint256 public halvingBlockInterval;
 
@@ -32,12 +38,14 @@ contract DividendBondingCurve is ERC20 {
    */
   constructor(
     uint256 _halvingBlockInterval,
+    uint256 _fee,
     address payable _dividendContractAddress,
     string memory name,
     string memory symbol
   ) 
   public ERC20(name, symbol) {
     createdAtBlock = block.number;
+    fee = _fee;
     halvingBlockInterval = _halvingBlockInterval;
     dividendContractAddress = _dividendContractAddress;
     dividendContract = Dividends(_dividendContractAddress);
@@ -51,41 +59,56 @@ contract DividendBondingCurve is ERC20 {
    */
   function sell(address seller, uint256 amount) public {
     require(msg.sender == seller, "sender not seller");
-    uint256 retAmount = calculateSellAmount(amount);
+    uint256 retAmount = calculateSellReward(amount);
     uint256 feeAmount = calculateFeeAmount(retAmount);
     _burn(seller, amount);
     // we take a fee on the returned ether and dont issue shares
     dividendContractAddress.send(feeAmount);
+    poolSupply = poolSupply.sub(retAmount);
+    (msg.sender).send(retAmount.sub(feeAmount));
   }
 
   /**
    * @dev
    *
    */
-  function buy() public payable {
-    uint256 feeAmount = calculateFeeAmount(msg.value);
-    uint256 postFeeAmount = (msg.value).sub(feeAmount);
-    uint256 buyAmount = calculateBuyAmount(postFeeAmount);
-    _mint(msg.sender, buyAmount);
+  function buy(uint256 tokenAmount) public payable {
+    uint256 buyPriceEther = calculateBuyPrice(tokenAmount);
+    require(msg.value >= buyPriceEther, "buy price higher than eth provided");
+    uint256 feeAmount = calculateFeeAmount(buyPriceEther);
+    uint256 postFeeAmount = (buyPriceEther).sub(feeAmount);
+    _mint(msg.sender, tokenAmount);
     dividendContractAddress.send(feeAmount);
+    poolSupply = poolSupply.add(postFeeAmount);
+    (msg.sender).send(msg.value.sub(buyPriceEther));
   }
 
   /**
    * @dev
-   *
+   * @param amount amount of tokens to sell
+   * @return amount of ether returned
    */
-  function calculateSellAmount(uint256 amount) internal pure returns (uint256) {
-    // implement curve sell
-    return amount;
+  function calculateSellReward(uint256 amountToSell) public view returns (uint256) {
+    uint256 totalTokens = totalSupply().sub(amountToSell);
+    uint256 m = multiple;
+    uint256 d = dec;
+    // TODO check overflow
+    // same as totalTokens^3
+    uint256 finalPrice = poolSupply.sub(m.mul(totalTokens).mul(totalTokens).div(uint256(2).mul(d).mul(d)));
+    return finalPrice; 
   }
 
   /**
    * @dev
-   *
+   * @param amount - amount of tokens to buy
+   * @return amount of ether required
    */
-  function calculateBuyAmount(uint256 amount) internal pure returns (uint256) {
-    // implement curve buy
-    return amount;
+  function calculateBuyPrice(uint256 amountToBuy) public view returns (uint256) {
+    uint256 totalTokens = amountToBuy.add(totalSupply());
+    uint256 m = multiple;
+    uint256 d = dec;
+    uint256 finalPrice = (m.mul(totalTokens).mul(totalTokens).div(uint256(2).mul(d).mul(d))).sub(poolSupply);
+    return finalPrice;
   }
 
   /**

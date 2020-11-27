@@ -6,7 +6,8 @@ module.exports = async function(deployer) {
   const dividendsContract = await Dividends.deployed();
   await deployer.deploy(
     DividendBondingCurve,
-    100,
+    1000, // fee
+    10, // halving block interval
     dividendsContract.address,
     "Token",
     "TKN"
