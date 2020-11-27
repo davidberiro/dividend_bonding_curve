@@ -2,6 +2,7 @@ pragma solidity ^0.6.0;
 
 import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
+import "./Dividends.sol";
 
 /*
 // Bonding token where part of every buy/sell has a fee going to dividend
@@ -13,16 +14,18 @@ contract DividendBondingCurve is ERC20 {
 
   // fee amount for every buy/sell parts per hundred thousand e.g 
   // 1000 = 1000/100000 = 1%
-  uint256 fee;
-  uint256 feeBase = 100000;
+  uint256 public fee;
+  uint256 public feeBase = 100000;
 
   // every how many blocks the share multiplier halves
-  uint256 halvingBlockInterval;
+  uint256 public halvingBlockInterval;
 
-  uint256 createdAtBlock;
+  uint256 public createdAtBlock;
 
   // address of contract which holds fees
-  address payable dividendContract;
+  address payable dividendContractAddress;
+  // contract instance
+  Dividends dividendContract;
 
   /**
    * @dev
@@ -30,12 +33,15 @@ contract DividendBondingCurve is ERC20 {
    */
   constructor(
     uint256 _halvingBlockInterval,
+    address payable _dividendContractAddress,
     string memory name,
     string memory symbol
   ) 
   public ERC20(name, symbol) {
     createdAtBlock = block.number;
     halvingBlockInterval = _halvingBlockInterval;
+    dividendContractAddress = _dividendContractAddress;
+    dividendContract = Dividends(_dividendContractAddress);
   }
 
   /**
@@ -48,7 +54,7 @@ contract DividendBondingCurve is ERC20 {
     uint256 feeAmount = calculateFeeAmount(retAmount);
     _burn(seller, amount);
     // we take a fee on the returned ether and dont issue shares
-    dividendContract.send(feeAmount);
+    dividendContractAddress.send(feeAmount);
   }
 
   /**
@@ -60,7 +66,7 @@ contract DividendBondingCurve is ERC20 {
     uint256 postFeeAmount = (msg.value).sub(feeAmount);
     uint256 buyAmount = calculateBuyAmount(postFeeAmount);
     _mint(msg.sender, buyAmount);
-    dividendContract.send(feeAmount);
+    dividendContractAddress.send(feeAmount);
   }
 
   /**
